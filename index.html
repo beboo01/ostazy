@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>مدير المجموعات للمدرس</title>
+<title>أستاذي لإدارة المجموعات</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#F2F5F1;--card:#fff;--ink:#12363A;--mute:#5B7275;--line:#D9E2DE;--acc:#12363A;--onacc:#fff;--ok:#1E8E5A;--okbg:#DDF1E6;--bad:#C2410C;--badbg:#FCE5DA;--warn:#B7791F;--warnbg:#FBF0D5;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -38,10 +38,12 @@ a.wa{display:inline-block;text-decoration:none;background:var(--ok);color:var(--
 .note{font-size:13px;color:var(--mute);margin-top:16px;text-align:center}
 .sc{width:80px;padding:5px 8px}
 .hide{display:none}
+.brand{font-size:24px;font-weight:800;padding:4px 0 12px;margin-bottom:14px;border-bottom:1px solid var(--line)}.brand span{color:var(--mute);font-weight:600;font-size:18px}
 </style>
 </head>
 <body>
 <main>
+<header class="brand">أستاذي <span>لإدارة المجموعات</span></header>
 <section id="auth" class="hide"><h1>سجّل دخولك</h1><p>بياناتك خاصة بيك ومتزامنة على كل أجهزتك.</p><div class="card"><label for="aem">الإيميل</label><input id="aem" type="email" autocomplete="email"><label for="apw">الباسورد (6 حروف على الأقل)</label><input id="apw" type="password" autocomplete="current-password"><div class="row" style="margin-top:12px"><button id="li" type="button">دخول</button><button class="ghost" id="su" type="button">حساب جديد</button></div><p id="amsg" role="status" style="margin:10px 0 0"></p></div></section>
 <section id="wiz">
   <h1>جهّز مجموعاتك في دقيقتين</h1>
@@ -116,7 +118,8 @@ function wizard(){
   const t=$("wt"),b=$("wb");
   if(W.step==0){t.textContent="بتدرّس إيه؟";b.innerHTML='<label for="subj">المادة</label><input id="subj" value="'+esc(W.subject)+'"><label for="stg">المرحلة</label><select id="stg">'+STAGES.map(x=>'<option'+(x==W.stage?' selected':'')+'>'+x+'</option>').join("")+'</select>'}
   else if(W.step==1){t.textContent="عندك كام مجموعة؟";
-    let h='<label for="cnt">عدد المجموعات</label><select id="cnt">'+[1,2,3,4].map(x=>'<option'+(x==W.n?' selected':'')+'>'+x+'</option>').join("")+'</select>';
+    while(W.slots.length<W.n)W.slots.push({d:W.slots.length%7,t:"17:00"});
+    let h='<label for="cnt">عدد المجموعات</label><select id="cnt">'+Array.from({length:12},(_,k)=>k+1).map(x=>'<option'+(x==W.n?' selected':'')+'>'+x+'</option>').join("")+'</select>';
     for(let i=0;i<W.n;i++)h+='<div class="row"><div><label for="d'+i+'">يوم المجموعة '+(i+1)+'</label><select id="d'+i+'">'+DAYS.map((d,j)=>'<option value="'+j+'"'+(j==W.slots[i].d?' selected':'')+'>'+d+'</option>').join("")+'</select></div><div><label for="h'+i+'">الساعة</label><input id="h'+i+'" type="time" value="'+W.slots[i].t+'"></div></div>';
     b.innerHTML=h;$("cnt").onchange=e=>{wsave();W.n=+e.target.value;wizard()}}
   else{t.textContent="سعر الشهر للطالب";b.innerHTML='<label for="pr">بالجنيه</label><input id="pr" type="number" min="0" step="10" value="'+W.price+'"><label><input type="checkbox" id="demo" style="width:auto"> أضف طلاب تجريبيين عشان أجرّب</label>'}
