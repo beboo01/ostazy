@@ -38,6 +38,7 @@ a.wa{display:inline-block;text-decoration:none;background:var(--ok);color:var(--
 .note{font-size:13px;color:var(--mute);margin-top:16px;text-align:center}
 .sc{width:80px;padding:5px 8px}
 .hide{display:none}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.chip{display:inline-flex;align-items:center;gap:4px;margin:0;font-weight:600;font-size:14px;border:1px solid var(--line);border-radius:99px;padding:3px 10px;background:var(--bg)}.chip input{width:auto}
 .brand{font-size:24px;font-weight:800;padding:4px 0 12px;margin-bottom:14px;border-bottom:1px solid var(--line)}.brand span{color:var(--mute);font-weight:600;font-size:18px}
 </style>
 </head>
@@ -54,6 +55,7 @@ a.wa{display:inline-block;text-decoration:none;background:var(--ok);color:var(--
 </section>
 <section id="app" class="hide">
   <div class="row" style="justify-content:space-between"><div><h1 id="ttl"></h1><p id="sub" style="margin:0"></p></div></div>
+  <div id="bill"></div>
   <div class="tabs" role="tablist" id="tabs"></div>
   <div id="view"></div>
   <p class="note" id="stor"></p><p class="note"><button class="ghost sm" id="out" type="button">تسجيل خروج</button></p>
@@ -75,15 +77,16 @@ const num=v=>Number(String(v).replace(/[٠-٩]/g,d=>"٠١٢٣٤٥٦٧٨٩".index
 const phone=p=>{let d=String(p||"").replace(/\D/g,"");if(d.startsWith("00"))d=d.slice(2);else if(d.startsWith("0"))d="20"+d.slice(1);return d};
 const wa=(p,m)=>"https://wa.me/"+phone(p)+"?text="+encodeURIComponent(m);
 const A=(p,m,t)=>'<a class="wa" target="_blank" rel="noopener" href="'+wa(p,m)+'">'+t+'</a>';
-const gname=g=>"مجموعة "+DAYS[g.d]+" "+fmt(g.t);
-const W={step:0,subject:"رياضيات",stage:"ثانوية عامة",n:2,slots:[{d:0,t:"17:00"},{d:3,t:"19:00"},{d:1,t:"16:00"},{d:4,t:"18:00"}],price:300,demo:false};
+const gname=g=>"مجموعة "+(g.days||[g.d||0]).slice().sort((a,b)=>a-b).map(d=>DAYS[d]).join(" + ")+" "+fmt(g.t)+(g.e?" – "+fmt(g.e):"");
+const W={step:0,subject:"رياضيات",stage:"ثانوية عامة",n:2,slots:[{days:[0,3],t:"17:00",e:"19:00"},{days:[1,4],t:"19:00",e:"21:00"},{days:[2,5],t:"16:00",e:"18:00"},{days:[0,3],t:"19:00",e:"21:00"}],price:300,demo:false};
 let S=null,store=null,tab="h",gi=0,adate=today(),pmonth=today().slice(0,7),rmonth=today().slice(0,7),pt;
 
 const SB_URL="https://dgktjcjvhhhtcucqsrji.supabase.co",SB_KEY="sb_publishable_wFdMsflUtKeSeby-_m4snw_KNEI7her";
-const sb=window.supabase.createClient(SB_URL,SB_KEY);let uid=null;
+const sb=window.supabase.createClient(SB_URL,SB_KEY);let uid=null,SUB=null,EMAIL="";
+const ADMIN_WA="",PRICE=150; // ضع رقم واتساب الدفع هنا بالصيغة الدولية، مثال: 201012345678
 const amsg=t=>{$("amsg").textContent=t};
 async function init(){
-  try{const{data}=await sb.auth.getSession();if(data.session){uid=data.session.user.id;await load();return}}catch(e){}
+  try{const{data}=await sb.auth.getSession();if(data.session){uid=data.session.user.id;EMAIL=data.session.user.email||"";await load();return}}catch(e){}
   $("auth").classList.remove("hide");
 }
 async function load(){
@@ -95,6 +98,7 @@ async function load(){
     if(data&&data.state&&data.state.groups)S=data.state;
     else{const old=localStorage.getItem("tm");if(old){S=JSON.parse(old);await save2()}}
   }catch(e){err=" (تعذّر تحميل بياناتك: "+(e.message||e)+")"}
+  try{const r=await sb.from("subscriptions").select("trial_ends,paid_until").eq("user_id",uid).maybeSingle();SUB=r.data||null}catch(e){SUB=null}
   $("stor").textContent="بياناتك محفوظة على حسابك ومتزامنة."+err;
   if(S){$("wiz").classList.add("hide");$("app").classList.remove("hide");render()}else{$("app").classList.add("hide");$("wiz").classList.remove("hide");wizard()}
 }
@@ -107,32 +111,43 @@ async function authGo(up){
   const r=up?await sb.auth.signUp({email,password}):await sb.auth.signInWithPassword({email,password});
   if(r.error){amsg(r.error.message);return}
   if(!r.data.session){amsg("تم إنشاء الحساب. افتح إيميلك واضغط رابط التأكيد، وبعدها ادخل.");return}
-  uid=r.data.session.user.id;await load();
+  uid=r.data.session.user.id;EMAIL=r.data.session.user.email||"";await load();
 }
 $("li").onclick=()=>authGo(false);$("su").onclick=()=>authGo(true);
 $("out").onclick=async()=>{await sb.auth.signOut();location.reload()};
 
+const active=()=>{if(!SUB)return true;const n=Date.now();return new Date(SUB.trial_ends).getTime()>n||(!!SUB.paid_until&&new Date(SUB.paid_until).getTime()>n)};
+function waSub(){if(!ADMIN_WA)return'<span class="tag bad">رقم الدفع لسه متحددش</span>';return A(ADMIN_WA,"السلام عليكم، أنا عايز أشترك في «أستاذي لإدارة المجموعات» ("+PRICE+" جنيه في الشهر). إيميل حسابي: "+EMAIL+". ابعتلي طريقة الدفع لو سمحت.","اشترك عن طريق واتساب")}
+function billHtml(){
+  if(!SUB)return"";
+  const n=Date.now(),te=new Date(SUB.trial_ends).getTime(),pu=SUB.paid_until?new Date(SUB.paid_until).getTime():0,df=t=>Math.max(0,Math.ceil((t-n)/864e5)),l=waSub();
+  if(pu>n)return'<div class="card"><span class="tag ok">اشتراكك ساري</span> لحد '+new Date(pu).toLocaleDateString("ar-EG")+(df(pu)<=5?' (باقي '+df(pu)+' أيام) '+l:'')+'</div>';
+  if(te>n)return'<div class="card"><span class="tag warn">تجربة مجانية</span> باقي '+df(te)+' يوم. '+l+'</div>';
+  return'<div class="card" style="border-color:var(--bad)"><h2>انتهت فترة الاستخدام</h2><p>بياناتك محفوظة وتقدر تشوفها وتنزّل نسخة احتياطية، لكن التعديل متوقف لحد ما تشترك ('+PRICE+' جنيه في الشهر).</p>'+l+'</div>'}
+function flash(){$("stor").textContent="انتهت فترة الاستخدام، اشترك عشان تقدر تعدّل."}
+function dayChips(pre,sel){return'<div class="chips">'+DAYS.map((d,j)=>'<label class="chip"><input type="checkbox" data-day="'+pre+'" value="'+j+'"'+(sel.includes(j)?' checked':'')+'> '+d+'</label>').join("")+'</div>'}
+function getDays(pre){return[...document.querySelectorAll('input[data-day="'+pre+'"]:checked')].map(x=>+x.value)}
 function wizard(){
   $("back").style.visibility=W.step?"visible":"hidden";
   $("next").textContent=W.step==2?"جهّز مجموعاتي":"التالي";
   const t=$("wt"),b=$("wb");
   if(W.step==0){t.textContent="بتدرّس إيه؟";b.innerHTML='<label for="subj">المادة</label><input id="subj" value="'+esc(W.subject)+'"><label for="stg">المرحلة</label><select id="stg">'+STAGES.map(x=>'<option'+(x==W.stage?' selected':'')+'>'+x+'</option>').join("")+'</select>'}
   else if(W.step==1){t.textContent="عندك كام مجموعة؟";
-    while(W.slots.length<W.n)W.slots.push({d:W.slots.length%7,t:"17:00"});
+    while(W.slots.length<W.n)W.slots.push({days:[W.slots.length%7,(W.slots.length+3)%7],t:"17:00",e:"19:00"});
     let h='<label for="cnt">عدد المجموعات</label><select id="cnt">'+Array.from({length:12},(_,k)=>k+1).map(x=>'<option'+(x==W.n?' selected':'')+'>'+x+'</option>').join("")+'</select>';
-    for(let i=0;i<W.n;i++)h+='<div class="row"><div><label for="d'+i+'">يوم المجموعة '+(i+1)+'</label><select id="d'+i+'">'+DAYS.map((d,j)=>'<option value="'+j+'"'+(j==W.slots[i].d?' selected':'')+'>'+d+'</option>').join("")+'</select></div><div><label for="h'+i+'">الساعة</label><input id="h'+i+'" type="time" value="'+W.slots[i].t+'"></div></div>';
+    for(let i=0;i<W.n;i++)h+='<div class="card" style="margin:10px 0"><b>المجموعة '+(i+1)+' (اختار الأيام)</b>'+dayChips("w"+i,W.slots[i].days)+'<div class="row" style="margin-top:6px"><div>من<input id="h'+i+'" type="time" value="'+W.slots[i].t+'"></div><div>إلى<input id="e'+i+'" type="time" value="'+(W.slots[i].e||"")+'"></div></div></div>';
     b.innerHTML=h;$("cnt").onchange=e=>{wsave();W.n=+e.target.value;wizard()}}
   else{t.textContent="سعر الشهر للطالب";b.innerHTML='<label for="pr">بالجنيه</label><input id="pr" type="number" min="0" step="10" value="'+W.price+'"><label><input type="checkbox" id="demo" style="width:auto"> أضف طلاب تجريبيين عشان أجرّب</label>'}
 }
 function wsave(){
   if(W.step==0){W.subject=$("subj").value.trim()||"المادة";W.stage=$("stg").value}
-  else if(W.step==1)for(let i=0;i<W.n;i++)W.slots[i]={d:+$("d"+i).value,t:$("h"+i).value||"17:00"};
+  else if(W.step==1)for(let i=0;i<W.n;i++){const ds=getDays("w"+i);W.slots[i]={days:ds.length?ds:[0],t:$("h"+i).value||"17:00",e:$("e"+i).value||""}}
   else{W.price=num($("pr").value);W.demo=$("demo").checked}
 }
 $("next").onclick=()=>{
   wsave();if(W.step<2){W.step++;wizard();return}
   const m=today().slice(0,7);
-  S={subject:W.subject,stage:W.stage,price:W.price,since:m,groups:W.slots.slice(0,W.n).map((s,i)=>({id:rid(),d:s.d,t:s.t,notify:false,students:W.demo?DEMO.map((n,j)=>({id:rid(),name:n,phone:"2010000000"+i+j,since:m})):[]})),att:{},pay:{},exams:[]};
+  S={subject:W.subject,stage:W.stage,price:W.price,since:m,groups:W.slots.slice(0,W.n).map((s,i)=>({id:rid(),days:s.days,t:s.t,e:s.e,notify:false,students:W.demo?DEMO.map((n,j)=>({id:rid(),name:n,phone:"2010000000"+i+j,since:m})):[]})),att:{},pay:{},exams:[]};
   gi=0;tab="h";persist();$("wiz").classList.add("hide");$("app").classList.remove("hide");render();
 };
 $("back").onclick=()=>{wsave();W.step--;wizard()};
@@ -150,6 +165,8 @@ const sm=m=>new Date(m+"-01").toLocaleDateString("ar-EG",{month:"short"});
 const months6=()=>{const r=[];for(let i=5;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);r.push(d.toISOString().slice(0,7))}return r};
 function bars(vals,labels,suf){const mx=Math.max(1,...vals.map(v=>v||0)),w=60;return'<svg viewBox="0 0 '+(labels.length*w)+' 140" style="width:100%;height:auto" role="img">'+vals.map((v,i)=>{const hh=Math.round((v||0)/mx*85),cx=i*w+30;return'<rect x="'+(cx-18)+'" y="'+(104-hh)+'" width="36" height="'+hh+'" rx="4" fill="var(--acc)"/><text x="'+cx+'" y="'+(98-hh)+'" text-anchor="middle" font-size="12" font-weight="700" fill="var(--ink)">'+(v==null?"—":v+(suf||""))+'</text><text x="'+cx+'" y="124" text-anchor="middle" font-size="11" fill="var(--mute)">'+esc(labels[i])+'</text>'}).join("")+'</svg>'}
 function render(){
+  $("bill").innerHTML=billHtml();
+  S.groups.forEach(g=>{if(!g.days)g.days=[g.d||0];if(g.e===undefined)g.e=""});
   $("ttl").textContent=S.subject+" · "+S.stage;
   const all=allSt();$("sub").textContent=S.groups.length+" مجموعات، "+all.length+" طالب، "+S.price+" جنيه في الشهر";
   $("tabs").innerHTML=TABS.map(([k,l])=>'<button role="tab" data-t="'+k+'" aria-selected="'+(k==tab)+'">'+l+'</button>').join("");
@@ -175,8 +192,8 @@ function render(){
       g.students.map((s,j)=>'<div class="stu"><span>'+esc(s.name)+' <span style="color:var(--mute);font-size:13px">'+esc(s.phone)+'</span></span><div class="btns">'+(g.notify?A(s.phone,"السلام عليكم، تم تغيير ميعاد "+S.subject+" لـ"+gname(g)+". برجاء التنبيه.","أبلغ"):"")+'<button class="ghost sm" data-a="ds" data-i="'+i+'" data-j="'+j+'">حذف</button></div></div>').join("")+
       (g.notify?'<button class="ghost sm" data-a="nd" data-i="'+i+'">تم إبلاغ الكل</button>':'')+
       '<label for="ns'+i+'">أضف طلاب (اسم، رقم ولي الأمر، كل طالب في سطر)</label><textarea id="ns'+i+'" placeholder="أحمد، 01012345678"></textarea><button class="sm" data-a="as" data-i="'+i+'" style="margin-top:6px">أضف</button>'+
-      '<div class="row" style="margin-top:10px"><select id="rd'+i+'">'+DAYS.map((d,j)=>'<option value="'+j+'"'+(j==g.d?' selected':'')+'>'+d+'</option>').join("")+'</select><input id="rt'+i+'" type="time" value="'+g.t+'"><button class="ghost sm fx" data-a="rs" data-i="'+i+'">غيّر الميعاد</button></div></div>').join("");
-    h+='<div class="card"><h2>مجموعة جديدة</h2><div class="row"><select id="nd">'+DAYS.map((d,j)=>'<option value="'+j+'">'+d+'</option>').join("")+'</select><input id="nt" type="time" value="17:00"><button class="fx" data-a="ag">أضف</button></div></div>';
+      '<div style="margin-top:10px"><b>الأيام والميعاد</b>'+dayChips("r"+i,g.days)+'<div class="row" style="margin-top:6px"><div>من<input id="rt'+i+'" type="time" value="'+g.t+'"></div><div>إلى<input id="re'+i+'" type="time" value="'+(g.e||"")+'"></div><button class="ghost sm fx" data-a="rs" data-i="'+i+'">غيّر الميعاد</button></div></div></div>').join("");
+    h+='<div class="card"><h2>مجموعة جديدة</h2><b>اختار الأيام</b>'+dayChips("n",[])+'<div class="row" style="margin-top:6px"><input id="nt" type="time" value="17:00" aria-label="من"><input id="ne" type="time" value="19:00" aria-label="إلى"><button class="fx" data-a="ag">أضف</button></div></div>';
     h+='<button class="ghost" data-a="bk">حمّل نسخة احتياطية</button>';
     v.innerHTML=h;
   }else if(tab=="s"){
@@ -214,21 +231,22 @@ function render(){
   q("pm",e=>{pmonth=e.target.value||pmonth;render()});q("rm",e=>{rmonth=e.target.value||rmonth;render()});
 }
 $("tabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(b){tab=b.dataset.t;render()}};
-$("view").onchange=e=>{const t=e.target;if(t.dataset&&t.dataset.f){const s=findSt(t.dataset.sid);if(s){s[t.dataset.f]=t.value;persist()}return}if(t.dataset&&t.dataset.e){const ex=S.exams.find(x=>x.id==t.dataset.e);ex.scores[t.dataset.s]=t.value===""?null:Math.min(num(t.value),ex.max);persist();render()}};
+$("view").onchange=e=>{const t=e.target;if(t.dataset&&(t.dataset.f||t.dataset.e)&&!active()){flash();render();return}if(t.dataset&&t.dataset.f){const s=findSt(t.dataset.sid);if(s){s[t.dataset.f]=t.value;persist()}return}if(t.dataset&&t.dataset.e){const ex=S.exams.find(x=>x.id==t.dataset.e);ex.scores[t.dataset.s]=t.value===""?null:Math.min(num(t.value),ex.max);persist();render()}};
 $("view").onclick=async e=>{
   const b=e.target.closest("button[data-a]");if(!b)return;
+  if(!active()&&!["os","cs","bk"].includes(b.dataset.a)){flash();return}
   const a=b.dataset.a,i=+b.dataset.i,j=+b.dataset.j,m=today().slice(0,7);
   if(a=="os"){sid=b.dataset.id}else if(a=="cs"){sid=null}else if(a=="dg"){S.groups.splice(i,1)}
   else if(a=="ds"){S.groups[i].students.splice(j,1)}
   else if(a=="as"){S.groups[i].students.push(...$("ns"+i).value.split("\n").map(l=>l.split(/[,،]/).map(x=>x.trim())).filter(r=>r[0]).map(r=>({id:rid(),name:r[0],phone:r[1]||"",since:m})))}
-  else if(a=="rs"){const g=S.groups[i];g.d=+$("rd"+i).value;g.t=$("rt"+i).value||g.t;g.notify=g.students.length>0}
+  else if(a=="rs"){const g=S.groups[i],ds=getDays("r"+i);if(!ds.length)return;g.days=ds;g.t=$("rt"+i).value||g.t;g.e=$("re"+i).value||"";g.notify=g.students.length>0}
   else if(a=="nd"){S.groups[i].notify=false}
-  else if(a=="ag"){S.groups.push({id:rid(),d:+$("nd").value,t:$("nt").value||"17:00",notify:false,students:[]})}
+  else if(a=="ag"){const ds=getDays("n");if(!ds.length)return;S.groups.push({id:rid(),days:ds,t:$("nt").value||"17:00",e:$("ne").value||"",notify:false,students:[]})}
   else if(a=="p"||a=="x"){const g=S.groups[gi],k=adate+"|"+g.id;S.att[k]=S.att[k]||{};const id=g.students[j].id,v=a=="p";S.att[k][id]=S.att[k][id]===v?null:v}
   else if(a=="pay"){S.pay[pmonth]=S.pay[pmonth]||{};S.pay[pmonth][b.dataset.id]=!S.pay[pmonth][b.dataset.id]}
   else if(a=="ae"){const t=$("et").value.trim();if(!t)return;S.exams.push({id:rid(),gid:S.groups[gi].id,title:t,date:today(),max:num($("em").value)||20,scores:{}})}
   else if(a=="de"){S.exams=S.exams.filter(x=>x.id!=b.dataset.id)}
-  else if(a=="bk"){try{const d=await claude.use("downloads");if(d)await d.save({filename:"teacher-backup.json",data:JSON.stringify(S,null,1)})}catch(err){}return}
+  else if(a=="bk"){const u=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:"application/json"})),l=document.createElement("a");l.href=u;l.download="teacher-backup.json";document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);return}
   persist();render();
 };
 init();
