@@ -83,7 +83,7 @@ let S=null,store=null,tab="h",gi=0,adate=today(),pmonth=today().slice(0,7),rmont
 
 const SB_URL="https://dgktjcjvhhhtcucqsrji.supabase.co",SB_KEY="sb_publishable_wFdMsflUtKeSeby-_m4snw_KNEI7her";
 const sb=window.supabase.createClient(SB_URL,SB_KEY);let uid=null,SUB=null,EMAIL="";
-const ADMIN_WA="",PRICE=150; // ضع رقم واتساب الدفع هنا بالصيغة الدولية، مثال: 201012345678
+const ADMIN_WA="201016229014",PRICE=150; // ضع رقم واتساب الدفع هنا بالصيغة الدولية، مثال: 201012345678
 const amsg=t=>{$("amsg").textContent=t};
 async function init(){
   try{const{data}=await sb.auth.getSession();if(data.session){uid=data.session.user.id;EMAIL=data.session.user.email||"";await load();return}}catch(e){}
