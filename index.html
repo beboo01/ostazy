@@ -38,6 +38,7 @@ a.wa{display:inline-block;text-decoration:none;background:var(--ok);color:var(--
 .note{font-size:13px;color:var(--mute);margin-top:16px;text-align:center}
 .sc{width:80px;padding:5px 8px}
 .hide{display:none}
+.pay{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}.pm{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:4px 10px;font-weight:600;background:var(--bg)}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.chip{display:inline-flex;align-items:center;gap:4px;margin:0;font-weight:600;font-size:14px;border:1px solid var(--line);border-radius:99px;padding:3px 10px;background:var(--bg)}.chip input{width:auto}
 .brand{font-size:24px;font-weight:800;padding:4px 0 12px;margin-bottom:14px;border-bottom:1px solid var(--line)}.brand span{color:var(--mute);font-weight:600;font-size:18px}
 </style>
@@ -83,7 +84,7 @@ let S=null,store=null,tab="h",gi=0,adate=today(),pmonth=today().slice(0,7),rmont
 
 const SB_URL="https://dgktjcjvhhhtcucqsrji.supabase.co",SB_KEY="sb_publishable_wFdMsflUtKeSeby-_m4snw_KNEI7her";
 const sb=window.supabase.createClient(SB_URL,SB_KEY);let uid=null,SUB=null,EMAIL="";
-const ADMIN_WA="201016229014",PRICE=150; // ضع رقم واتساب الدفع هنا بالصيغة الدولية، مثال: 201012345678
+const ADMIN_WA="201016229014",PAY_NUM="01016229014",PRICE=150; // ضع رقم واتساب الدفع هنا بالصيغة الدولية، مثال: 201012345678
 const amsg=t=>{$("amsg").textContent=t};
 async function init(){
   try{const{data}=await sb.auth.getSession();if(data.session){uid=data.session.user.id;EMAIL=data.session.user.email||"";await load();return}}catch(e){}
@@ -121,9 +122,12 @@ function waSub(){if(!ADMIN_WA)return'<span class="tag bad">رقم الدفع ل�
 function billHtml(){
   if(!SUB)return"";
   const n=Date.now(),te=new Date(SUB.trial_ends).getTime(),pu=SUB.paid_until?new Date(SUB.paid_until).getTime():0,df=t=>Math.max(0,Math.ceil((t-n)/864e5)),l=waSub();
-  if(pu>n)return'<div class="card"><span class="tag ok">اشتراكك ساري</span> لحد '+new Date(pu).toLocaleDateString("ar-EG")+(df(pu)<=5?' (باقي '+df(pu)+' أيام) '+l:'')+'</div>';
-  if(te>n)return'<div class="card"><span class="tag warn">تجربة مجانية</span> باقي '+df(te)+' يوم. '+l+'</div>';
-  return'<div class="card" style="border-color:var(--bad)"><h2>انتهت فترة الاستخدام</h2><p>بياناتك محفوظة وتقدر تشوفها وتنزّل نسخة احتياطية، لكن التعديل متوقف لحد ما تشترك ('+PRICE+' جنيه في الشهر).</p>'+l+'</div>'}
+  if(pu>n)return'<div class="card"><span class="tag ok">اشتراكك ساري</span> لحد '+new Date(pu).toLocaleDateString("ar-EG")+(df(pu)<=5?' (باقي '+df(pu)+' أيام) '+l+payBox():'')+'</div>';
+  if(te>n)return'<div class="card"><span class="tag warn">تجربة مجانية</span> باقي '+df(te)+' يوم. '+l+payBox()+'</div>';
+  return'<div class="card" style="border-color:var(--bad)"><h2>انتهت فترة الاستخدام</h2><p>بياناتك محفوظة وتقدر تشوفها وتنزّل نسخة احتياطية، لكن التعديل متوقف لحد ما تشترك ('+PRICE+' جنيه في الشهر).</p>'+l+payBox()+'</div>'}
+const IC_BOLT='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>',IC_WAL='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/></svg>';
+function payBox(){return'<div class="pay"><b>طرق الدفع</b><div class="btns" style="margin:6px 0"><span class="pm">'+IC_BOLT+' إنستا باي</span><span class="pm">'+IC_WAL+' فودافون كاش</span></div><div>حوّل <b>'+PRICE+' جنيه</b> على الرقم <b dir="ltr">'+PAY_NUM+'</b> <button class="ghost sm" type="button" data-copy="'+PAY_NUM+'">نسخ الرقم</button></div><small style="color:var(--mute)">بعد التحويل ابعت صورة الإيصال على واتساب وهنفعّل حسابك.</small></div>'}
+$("bill").onclick=e=>{const b=e.target.closest("button[data-copy]");if(b&&navigator.clipboard)navigator.clipboard.writeText(b.dataset.copy).then(()=>{b.textContent="تم النسخ"}).catch(()=>{})};
 function flash(){$("stor").textContent="انتهت فترة الاستخدام، اشترك عشان تقدر تعدّل."}
 function dayChips(pre,sel){return'<div class="chips">'+DAYS.map((d,j)=>'<label class="chip"><input type="checkbox" data-day="'+pre+'" value="'+j+'"'+(sel.includes(j)?' checked':'')+'> '+d+'</label>').join("")+'</div>'}
 function getDays(pre){return[...document.querySelectorAll('input[data-day="'+pre+'"]:checked')].map(x=>+x.value)}
