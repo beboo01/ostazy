@@ -15,7 +15,7 @@ const sdk='window.testDb='+JSON.stringify({state,updated_at:'2026-11-21T20:00:00
           op:'select',filters:[],
           select(){if(this.op==='select')return this;if(window.forceConflict)return Promise.resolve({data:[],error:null});window.testDb=structuredClone(this.row);window.writes.push(structuredClone(this.row));return Promise.resolve({data:[{updated_at:this.row.updated_at}],error:null})},
           eq(k,v){this.filters.push([k,v]);return this},is(k,v){return this.eq(k,v)},
-          maybeSingle(){return Promise.resolve({data:table==='subscriptions'?{paid_until:'2099-01-01'}:window.testDb,error:null})},
+          maybeSingle(){return Promise.resolve({data:structuredClone(table==='subscriptions'?{paid_until:'2099-01-01'}:window.testDb),error:null})},
           update(row){this.op='update';this.row=row;return this},insert(row){this.op='insert';this.row=row;return this}
         };
       }
@@ -32,7 +32,8 @@ const sdk='window.testDb='+JSON.stringify({state,updated_at:'2026-11-21T20:00:00
   try{
     await page.goto(base);await page.getByRole('tab',{name:'الطلاب',exact:true}).click();await page.getByRole('button',{name:'الملف',exact:true}).first().click();
     await page.locator('textarea[data-f="note"]').fill('ملاحظة اختبار محفوظة');await page.locator('textarea[data-f="note"]').blur();
-    await page.waitForFunction(()=>window.testDb.state.groups[0].students[0].note==='ملاحظة اختبار محفوظة');
+    await page.waitForFunction(()=>window.testDb.state.groups[0].students[0].note==='ملاحظة اختبار محفوظة' && document.getElementById('sync').textContent.includes('تم حفظ كل'));
+    assert.ok(await page.evaluate(()=>window.writes.length>0));
     await page.getByRole('tab',{name:'الرئيسية',exact:true}).click();await page.getByRole('tab',{name:'الطلاب',exact:true}).click();assert.equal(await page.locator('textarea[data-f="note"]').inputValue(),'ملاحظة اختبار محفوظة');
     await page.screenshot({path:process.env.OSTAZY_SCREENSHOT_DIR?path.join(process.env.OSTAZY_SCREENSHOT_DIR,'ostazy-student-mobile.png'):'/tmp/ostazy-student-mobile.png',fullPage:true});
     await page.getByRole('tab',{name:'المصاريف',exact:true}).click();await page.getByRole('button',{name:'تم الدفع',exact:true}).first().click();
