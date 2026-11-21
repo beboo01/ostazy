@@ -31,7 +31,10 @@ const sdk='window.testDb='+JSON.stringify({state,updated_at:'2026-11-21T20:00:00
   await page.route('**/*',route=>{const url=route.request().url();if(url.includes('cdn.jsdelivr.net/npm/@supabase/'))return route.fulfill({contentType:'application/javascript',body:sdk});if(url.startsWith(base))return route.continue();return route.abort()});
   try{
     await page.goto(base);
-    assert.ok(await page.evaluate(()=>document.getElementById('syncTools').classList.contains('hide')),'syncTools must stay hidden in the normal state');await page.getByRole('tab',{name:'الطلاب',exact:true}).click();await page.getByRole('button',{name:'الملف',exact:true}).first().click();
+    assert.ok(await page.evaluate(()=>document.getElementById('syncTools').classList.contains('hide')),'syncTools must stay hidden in the normal state');
+    assert.ok(await page.locator('#btabs').isVisible(),'mobile bottom nav must be visible');
+    assert.ok(!(await page.locator('#tabs').isVisible()),'desktop sidebar strip must stay hidden on mobile');
+    await page.screenshot({path:process.env.OSTAZY_SCREENSHOT_DIR?path.join(process.env.OSTAZY_SCREENSHOT_DIR,'ostazy-home-mobile.png'):'/tmp/ostazy-home-mobile.png',fullPage:true});await page.getByRole('tab',{name:'الطلاب',exact:true}).click();await page.getByRole('button',{name:'الملف',exact:true}).first().click();
     await page.locator('textarea[data-f="note"]').fill('ملاحظة اختبار محفوظة');await page.locator('textarea[data-f="note"]').blur();
     await page.waitForFunction(()=>window.testDb.state.groups[0].students[0].note==='ملاحظة اختبار محفوظة' && document.getElementById('sync').textContent.includes('تم حفظ كل'));
     assert.ok(await page.evaluate(()=>window.writes.length>0));
@@ -39,7 +42,8 @@ const sdk='window.testDb='+JSON.stringify({state,updated_at:'2026-11-21T20:00:00
     await page.screenshot({path:process.env.OSTAZY_SCREENSHOT_DIR?path.join(process.env.OSTAZY_SCREENSHOT_DIR,'ostazy-student-mobile.png'):'/tmp/ostazy-student-mobile.png',fullPage:true});
     await page.getByRole('tab',{name:'المصاريف',exact:true}).click();await page.getByRole('button',{name:'تم الدفع',exact:true}).first().click();
     await page.waitForFunction(()=>window.testDb.state.paymentLedger?.length===1);assert.equal(await page.evaluate(()=>window.testDb.state.paymentLedger[0].amount),300);
-    await page.getByRole('tab',{name:'النسخ الاحتياطي',exact:true}).click();
+    await page.getByRole('button',{name:'المزيد',exact:true}).click();assert.ok(await page.locator('#sheet').isVisible(),'المزيد sheet must open on mobile');
+    await page.getByRole('tab',{name:'النسخ الاحتياطي',exact:true}).click();assert.ok(!(await page.locator('#sheet').isVisible()),'المزيد sheet must close after choosing a section');
     await page.screenshot({path:process.env.OSTAZY_SCREENSHOT_DIR?path.join(process.env.OSTAZY_SCREENSHOT_DIR,'ostazy-backup-mobile.png'):'/tmp/ostazy-backup-mobile.png',fullPage:true});
     const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'تنزيل نسخة احتياطية',exact:true}).click();const download=await downloadPromise;assert.match(download.suggestedFilename(),/^ostazy-backup-/);
     assert.ok(await page.evaluate(()=>{const r=document.getElementById('restorePick').getBoundingClientRect();return r.width<=1&&r.height<=1}),'native file input must be clipped out of view');
@@ -52,9 +56,11 @@ const sdk='window.testDb='+JSON.stringify({state,updated_at:'2026-11-21T20:00:00
     await page.getByRole('tab',{name:'المصاريف',exact:true}).click();await page.evaluate(()=>window.forceConflict=true);await page.getByRole('button',{name:'تم الدفع',exact:true}).first().click();await page.waitForFunction(()=>document.getElementById('sync').textContent.includes('توقف الحفظ'));
     assert.ok(await page.evaluate(()=>!document.getElementById('syncTools').classList.contains('hide')),'syncTools must surface when saving is blocked');
     const before=await page.evaluate(()=>window.writes.length);await page.getByRole('button',{name:'إلغاء',exact:true}).first().click();assert.equal(await page.evaluate(()=>window.writes.length),before);
-    await page.getByRole('tab',{name:'النسخ الاحتياطي',exact:true}).click();assert.ok(await page.locator('#view').getByRole('button',{name:'إعادة تحميل البيانات',exact:true}).isVisible());
-    await page.setViewportSize({width:1280,height:900});await page.screenshot({path:process.env.OSTAZY_SCREENSHOT_DIR?path.join(process.env.OSTAZY_SCREENSHOT_DIR,'ostazy-conflict-desktop.png'):'/tmp/ostazy-conflict-desktop.png',fullPage:true});
+    await page.getByRole('button',{name:'المزيد',exact:true}).click();await page.getByRole('tab',{name:'النسخ الاحتياطي',exact:true}).click();assert.ok(await page.locator('#view').getByRole('button',{name:'إعادة تحميل البيانات',exact:true}).isVisible());
+    await page.setViewportSize({width:1280,height:900});
+    assert.ok(await page.locator('#tabs').isVisible(),'desktop sidebar must be visible on desktop');
+    assert.ok(!(await page.locator('#btabs').isVisible()),'mobile bottom nav must stay hidden on desktop');await page.screenshot({path:process.env.OSTAZY_SCREENSHOT_DIR?path.join(process.env.OSTAZY_SCREENSHOT_DIR,'ostazy-conflict-desktop.png'):'/tmp/ostazy-conflict-desktop.png',fullPage:true});
     await page.getByRole('tab',{name:'النسخ الاحتياطي',exact:true}).click();await page.screenshot({path:process.env.OSTAZY_SCREENSHOT_DIR?path.join(process.env.OSTAZY_SCREENSHOT_DIR,'ostazy-backup-desktop.png'):'/tmp/ostazy-backup-desktop.png',fullPage:true});
-    assert.deepEqual(errors,[]);console.log('PASS: mobile profile persistence, receipt capture, export, restore, conflict lock, desktop render; no browser exceptions.');
+    assert.deepEqual(errors,[]);console.log('PASS: mobile profile persistence, receipt capture, export, restore, conflict lock, desktop render; mobile bottom nav + المزيد sheet, desktop sidebar; no browser exceptions.');
   }finally{await browser.close();await new Promise(resolve=>server.close(resolve))}
 })().catch(error=>{console.error(error);process.exitCode=1});
