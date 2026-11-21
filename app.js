@@ -1,8 +1,10 @@
 const DAYS=["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
 const STAGES=["ابتدائي","إعدادي","ثانوية عامة","جامعي"];
 const TABS=[["h","الرئيسية"],["g","المجموعات"],["s","الطلاب"],["a","الحضور"],["p","المصاريف"],["e","الدرجات"],["r","التقارير"],["b","النسخ الاحتياطي"]];
+const TL=Object.fromEntries(TABS),BMAIN=["h","a","p","s"],BMORE=["g","e","r","b"];
 const ICG=(p,s)=>`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const TICON={h:ICG('<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/>'),g:ICG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 5a3 3 0 0 1 0 6"/><path d="M17.5 14.4c2.4.7 4 2.7 4 5.6"/>'),s:ICG('<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11.2V15c0 1.7 2.7 3 6 3s6-1.3 6-3v-3.8"/>'),a:ICG('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>'),p:ICG('<rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/>'),e:ICG('<path d="M4 20V10M10 20V4M16 20v-7"/><path d="M2.5 20h19"/>'),r:ICG('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>'),b:ICG('<path d="M12 3v11"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/>')};
+const IC_MORE=ICG('<circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/>');
 const DEMO=["أحمد","مريم","يوسف","سلمى"];
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -18,6 +20,7 @@ const A=(p,m,t)=>'<a class="wa" target="_blank" rel="noopener" href="'+wa(p,m)+'
 const gname=g=>"مجموعة "+(g.days||[g.d||0]).slice().sort((a,b)=>a-b).map(d=>DAYS[d]).join(" + ")+" "+fmt(g.t)+(g.e?" – "+fmt(g.e):"");
 const W={step:0,subject:"رياضيات",stage:"ثانوية عامة",n:2,slots:[{days:[0,3],t:"17:00",e:"19:00"},{days:[1,4],t:"19:00",e:"21:00"},{days:[2,5],t:"16:00",e:"18:00"},{days:[0,3],t:"19:00",e:"21:00"}],price:300,demo:false};
 let S=null,store=null,tab="h",gi=0,adate=today(),pmonth=today().slice(0,7),rmonth=today().slice(0,7),pt;
+let moreOpen=false;
 
 const SB_URL="https://dgktjcjvhhhtcucqsrji.supabase.co",SB_KEY="sb_publishable_wFdMsflUtKeSeby-_m4snw_KNEI7her";
 if(!window.supabase){document.getElementById("sync").textContent="تعذّر تحميل خدمة الدخول. افحص الاتصال ثم أعد تحميل الصفحة.";throw new Error("Supabase SDK unavailable")}
@@ -164,6 +167,9 @@ function render(){
   $("ttl").textContent=S.subject+" · "+S.stage;
   const all=allSt();$("sub").textContent=S.groups.length+" مجموعات، "+all.length+" طالب، "+S.price+" جنيه في الشهر";
   $("tabs").innerHTML=TABS.map(([k,l])=>'<button role="tab" data-t="'+k+'" aria-selected="'+(k==tab)+'">'+TICON[k]+'<span>'+l+'</span></button>').join("");
+  $("btabs").innerHTML=BMAIN.map(k=>'<button role="tab" data-t="'+k+'" aria-selected="'+(k==tab)+'">'+TICON[k]+'<span>'+TL[k]+'</span></button>').join("")+'<button type="button" data-t="more" aria-expanded="'+moreOpen+'" aria-controls="sheet" aria-selected="'+BMORE.includes(tab)+'">'+IC_MORE+'<span>المزيد</span></button>';
+  if(moreOpen)$("sheet").classList.remove("hide");else $("sheet").classList.add("hide");
+  $("sheet").innerHTML=BMORE.map(k=>'<button role="tab" data-t="'+k+'" aria-selected="'+(k==tab)+'">'+TICON[k]+'<span>'+TL[k]+'</span></button>').join("");
   if(gi>=S.groups.length)gi=0;
   const v=$("view");
   const gsel=()=>'<label for="gs">المجموعة</label><select id="gs">'+S.groups.map((x,i)=>'<option value="'+i+'"'+(i==gi?' selected':'')+'>'+esc(gname(x))+'</option>').join("")+'</select>';
@@ -231,6 +237,8 @@ function render(){
   const rb=$("restoreBtn");if(rb)rb.onclick=()=>{const i=$("restorePick");if(i)i.click()};
 }
 $("tabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(b){tab=b.dataset.t;render()}};
+$("btabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(!b)return;if(b.dataset.t=="more"){moreOpen=!moreOpen;render();return}moreOpen=false;tab=b.dataset.t;render()};
+$("sheet").onclick=e=>{const b=e.target.closest("button[data-t]");if(!b)return;moreOpen=false;tab=b.dataset.t;render()};
 $("view").onchange=e=>{const t=e.target;if(t.id==="restorePick"){restoreFile(t);return}if(t.dataset&&(t.dataset.f||t.dataset.e)&&!active()){flash();render();return}if(t.dataset&&t.dataset.f){const s=findSt(t.dataset.sid);if(s){s[t.dataset.f]=t.value;persist()}return}if(t.dataset&&t.dataset.e){const ex=S.exams.find(x=>x.id==t.dataset.e);ex.scores[t.dataset.s]=C.clampScore(t.value,ex.max);persist();render()}};
 $("view").onclick=async e=>{
   const tb=e.target.closest("button[data-t]");if(tb){tab=tb.dataset.t;render();return}
