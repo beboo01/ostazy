@@ -1,0 +1,11 @@
+{
+  "name": "ostazy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Arabic teacher group management MVP",
+  "scripts": {
+    "test": "TZ=Africa/Cairo node --test core.test.js",
+    "check": "node --check app.js && node --check core.js"
+  },
+  "engines": {"node": ">=20"}
+}
