@@ -1,8 +1,10 @@
 # Deployment and rollback checklist
 
-This branch is intended for review, not an automatic production rollout. No production database migration is supplied, because the live schema, policies and triggers were not available for inspection.
+Release status, 21 November 2026: the incremental client fixes were merged in PR #1 at commit `dd90e83350219d96fd8f6aa02bc0e1a0de190332` and deployed successfully to the existing GitHub Pages site. The three served runtime files matched the tested files byte for byte. See [VERIFICATION.md](VERIFICATION.md) for the subsequent live database inspection, rollback-only role tests and remaining limits. No database migration was required or applied.
 
-## Before merging
+The checklist below remains the target for broader production hardening. Several end-to-end and operational gates remain open; this incremental update does not certify the service as fully launch-ready.
+
+## Broader release checklist
 
 1. Export `teacher_state` and `subscriptions` securely from Supabase and verify the restore route. Do not commit exports or customer data.
 2. Complete [SECURITY-REVIEW.md](SECURITY-REVIEW.md) using a staging project and two synthetic teacher accounts. Keep anonymous/publishable and signed-in roles separate from a service role. Never put a service-role key in browser code.
@@ -17,7 +19,7 @@ This branch is intended for review, not an automatic production rollout. No prod
 7. Restore an old-format backup on a synthetic account. Confirm legacy paid flags remain visible without invented historical amounts. If a stored state fails validation, keep an original export and correct it on staging. Do not erase it to get past validation.
 8. Review the UI on mobile and desktop, including RTL tabs, note fields, fee totals, errors and read-only behavior. Browser tests use a mocked SDK; verify the pinned production SDK against staging too.
 
-## Publish after review
+## Publishing future updates
 
 Deploy `index.html`, `app.js` and `core.js` together, in the same directory. There is no bundle step. Use HTTPS, short/no-cache HTML during rollout, and avoid a cached old script with a new page. Restrict hosting output to runtime files when possible; tests and internal project docs are not needed to serve the product.
 
@@ -29,4 +31,4 @@ Keep a verified export before changing software. If rolling back the client, do 
 
 ## Not included
 
-No schema normalization, cross-device automatic merge, durable offline sync, server-side subscription policies, database restore service, payment gateway, password recovery implementation or legal-policy approval is claimed by this branch. These are separate release gates, not completed features.
+No schema normalization, cross-device automatic merge, durable offline sync, server-side subscription policies, database restore service, payment gateway, password recovery implementation or legal-policy approval is claimed by this branch. Server-side subscription policies already exist and were inspected; they were not implemented by this change. The other items are separate release gates, not completed features.
