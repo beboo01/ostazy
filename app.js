@@ -84,6 +84,7 @@ $("reloadData").onclick=()=>{if(dirty&&!confirm("يوجد تعديل غير مح
 $("downloadAll").onclick=downloadBackup;
 async function restoreFile(input){
  const file=input.files[0];input.value="";if(!file)return;
+ const rn=$("restoreName");if(rn)rn.textContent=file.name;
  if(!active()){flash();return}
  try{if(file.size>5*1024*1024)throw new Error("حجم النسخة أكبر من 5 ميجابايت");const restored=C.parseBackup(await file.text());
  if(!confirm("الاستعادة ستستبدل بيانات الحساب الحالية بعد الحفظ. سيتم تنزيل نسخة من البيانات الحالية أولًا. هل أنت متأكد؟"))return;
@@ -211,7 +212,7 @@ function render(){
     v.innerHTML=h;
   }else if(tab=="b"){
     v.innerHTML='<div class="card"><h2>النسخ الاحتياطي</h2><p>نزّل نسخة JSON من كل بياناتك في أي وقت. النسخة تحتوي بيانات طلابك، احفظها في مكان خاص وآمن.</p><button type="button" data-a="bk">تنزيل نسخة احتياطية</button></div>'
-      +'<div class="card"><h2>استعادة نسخة</h2><label for="restorePick">استعادة نسخة JSON (بحد أقصى 5 ميجابايت)</label><input id="restorePick" type="file" accept="application/json,.json"><small>الاستعادة بتنزّل نسخة من بياناتك الحالية الأول، وبعدين بتستبدلها بعد الحفظ.</small></div>'
+      +'<div class="card"><h2>استعادة نسخة</h2><label for="restorePick">استعادة نسخة JSON (بحد أقصى 5 ميجابايت)</label><input id="restorePick" class="srfile" type="file" accept="application/json,.json"><div class="btns"><button type="button" id="restoreBtn">اختيار ملف النسخة</button><span id="restoreName" class="fname" aria-live="polite"></span></div><small>الاستعادة بتنزّل نسخة من بياناتك الحالية الأول، وبعدين بتستبدلها بعد الحفظ.</small></div>'
       +'<div class="card"><h2>مزامنة الحفظ</h2><p>حالة الحفظ بتظهر دايمًا في شريط الحالة أعلى الصفحة.</p><div class="btns"><button type="button" class="ghost sm" data-a="retry">حاول الحفظ</button><button type="button" class="ghost sm" data-a="reload">إعادة تحميل البيانات</button></div></div>';
   }else{
     const ms=months6();
@@ -227,6 +228,7 @@ function render(){
   const q=(id,fn)=>{const e=$(id);if(e)e.onchange=fn};
   q("gs",e=>{gi=+e.target.value;render()});q("ad",e=>{adate=e.target.value||today();render()});
   q("pm",e=>{pmonth=e.target.value||pmonth;render()});q("rm",e=>{rmonth=e.target.value||rmonth;render()});
+  const rb=$("restoreBtn");if(rb)rb.onclick=()=>{const i=$("restorePick");if(i)i.click()};
 }
 $("tabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(b){tab=b.dataset.t;render()}};
 $("view").onchange=e=>{const t=e.target;if(t.id==="restorePick"){restoreFile(t);return}if(t.dataset&&(t.dataset.f||t.dataset.e)&&!active()){flash();render();return}if(t.dataset&&t.dataset.f){const s=findSt(t.dataset.sid);if(s){s[t.dataset.f]=t.value;persist()}return}if(t.dataset&&t.dataset.e){const ex=S.exams.find(x=>x.id==t.dataset.e);ex.scores[t.dataset.s]=C.clampScore(t.value,ex.max);persist();render()}};
