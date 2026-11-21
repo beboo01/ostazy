@@ -42,6 +42,11 @@ const sdk='window.testDb='+JSON.stringify({state,updated_at:'2026-11-21T20:00:00
     await page.getByRole('tab',{name:'النسخ الاحتياطي',exact:true}).click();
     await page.screenshot({path:process.env.OSTAZY_SCREENSHOT_DIR?path.join(process.env.OSTAZY_SCREENSHOT_DIR,'ostazy-backup-mobile.png'):'/tmp/ostazy-backup-mobile.png',fullPage:true});
     const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'تنزيل نسخة احتياطية',exact:true}).click();const download=await downloadPromise;assert.match(download.suggestedFilename(),/^ostazy-backup-/);
+    assert.ok(await page.evaluate(()=>{const r=document.getElementById('restorePick').getBoundingClientRect();return r.width<=1&&r.height<=1}),'native file input must be clipped out of view');
+    assert.ok(await page.locator('#view').getByRole('button',{name:'اختيار ملف النسخة',exact:true}).isVisible(),'styled picker button must be visible');
+    await page.locator('#restorePick').setInputFiles({name:'big-backup.json',mimeType:'application/json',buffer:Buffer.alloc(5*1024*1024+1,48)});
+    await page.waitForFunction(()=>document.getElementById('sync').textContent.includes('لم تتم الاستعادة'));
+    assert.equal(await page.locator('#restoreName').textContent(),'big-backup.json','selected filename must show next to the picker');
     const saved=await page.evaluate(()=>window.testDb.state);await page.locator('#restorePick').setInputFiles({name:'backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(saved))});await page.waitForFunction(()=>document.getElementById('sync').textContent.includes('تم حفظ كل'));
     // Real DOM behavior for a failed optimistic write: preserve local work and stop editing.
     await page.getByRole('tab',{name:'المصاريف',exact:true}).click();await page.evaluate(()=>window.forceConflict=true);await page.getByRole('button',{name:'تم الدفع',exact:true}).first().click();await page.waitForFunction(()=>document.getElementById('sync').textContent.includes('توقف الحفظ'));
