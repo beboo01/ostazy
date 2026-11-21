@@ -2,8 +2,10 @@ const DAYS=["السبت","الأحد","الاثنين","الثلاثاء","ال�
 const STAGES=["ابتدائي","إعدادي","ثانوية عامة","جامعي"];
 const TABS=[["h","الرئيسية"],["g","المجموعات"],["s","الطلاب"],["a","الحضور"],["p","المصاريف"],["e","الدرجات"],["r","التقارير"],["b","النسخ الاحتياطي"]];
 const TL=Object.fromEntries(TABS),BMAIN=["h","a","p","s"],BMORE=["g","e","r","b"];
+const ADMIN_UID="1196d2ad-0eb9-4c81-a3e0-657c13d05a67",ATAB=["m","الإدارة"];
 const ICG=(p,s)=>`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
 const TICON={h:ICG('<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/>'),g:ICG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 5a3 3 0 0 1 0 6"/><path d="M17.5 14.4c2.4.7 4 2.7 4 5.6"/>'),s:ICG('<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11.2V15c0 1.7 2.7 3 6 3s6-1.3 6-3v-3.8"/>'),a:ICG('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>'),p:ICG('<rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/>'),e:ICG('<path d="M4 20V10M10 20V4M16 20v-7"/><path d="M2.5 20h19"/>'),r:ICG('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>'),b:ICG('<path d="M12 3v11"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/>')};
+const IC_ADM=ICG('<path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9.5 12l2 2 3.5-4"/>');
 const IC_MORE=ICG('<circle cx="5" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.7" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.7" fill="currentColor" stroke="none"/>');
 const DEMO=["أحمد","مريم","يوسف","سلمى"];
 const $=id=>document.getElementById(id);
@@ -21,6 +23,7 @@ const gname=g=>"مجموعة "+(g.days||[g.d||0]).slice().sort((a,b)=>a-b).map(d
 const W={step:0,subject:"رياضيات",stage:"ثانوية عامة",n:2,slots:[{days:[0,3],t:"17:00",e:"19:00"},{days:[1,4],t:"19:00",e:"21:00"},{days:[2,5],t:"16:00",e:"18:00"},{days:[0,3],t:"19:00",e:"21:00"}],price:300,demo:false};
 let S=null,store=null,tab="h",gi=0,adate=today(),pmonth=today().slice(0,7),rmonth=today().slice(0,7),pt;
 let moreOpen=false;
+let ADMIN_ROWS=null;
 
 const SB_URL="https://dgktjcjvhhhtcucqsrji.supabase.co",SB_KEY="sb_publishable_wFdMsflUtKeSeby-_m4snw_KNEI7her";
 if(!window.supabase){document.getElementById("sync").textContent="تعذّر تحميل خدمة الدخول. افحص الاتصال ثم أعد تحميل الصفحة.";throw new Error("Supabase SDK unavailable")}
@@ -166,10 +169,12 @@ function render(){
   S.groups.forEach(g=>{if(!g.days)g.days=[g.d||0];if(g.e===undefined)g.e=""});
   $("ttl").textContent=S.subject+" · "+S.stage;
   const all=allSt();$("sub").textContent=S.groups.length+" مجموعات، "+all.length+" طالب، "+S.price+" جنيه في الشهر";
-  $("tabs").innerHTML=TABS.map(([k,l])=>'<button role="tab" data-t="'+k+'" aria-selected="'+(k==tab)+'">'+TICON[k]+'<span>'+l+'</span></button>').join("");
-  $("btabs").innerHTML=BMAIN.map(k=>'<button role="tab" data-t="'+k+'" aria-selected="'+(k==tab)+'">'+TICON[k]+'<span>'+TL[k]+'</span></button>').join("")+'<button type="button" data-t="more" aria-expanded="'+moreOpen+'" aria-controls="sheet" aria-selected="'+BMORE.includes(tab)+'">'+IC_MORE+'<span>المزيد</span></button>';
+  if(tab=="m"&&uid!==ADMIN_UID)tab="h";
+  const ticon=k=>k=="m"?IC_ADM:TICON[k],isAdm=uid===ADMIN_UID,tabs=isAdm?TABS.concat([ATAB]):TABS,moreTabs=isAdm?BMORE.concat(["m"]):BMORE;
+  $("tabs").innerHTML=tabs.map(([k,l])=>'<button role="tab" data-t="'+k+'" aria-selected="'+(k==tab)+'">'+ticon(k)+'<span>'+l+'</span></button>').join("");
+  $("btabs").innerHTML=BMAIN.map(k=>'<button role="tab" data-t="'+k+'" aria-selected="'+(k==tab)+'">'+ticon(k)+'<span>'+TL[k]+'</span></button>').join("")+'<button type="button" data-t="more" aria-expanded="'+moreOpen+'" aria-controls="sheet" aria-selected="'+moreTabs.includes(tab)+'">'+IC_MORE+'<span>المزيد</span></button>';
   if(moreOpen)$("sheet").classList.remove("hide");else $("sheet").classList.add("hide");
-  $("sheet").innerHTML=BMORE.map(k=>'<button role="tab" data-t="'+k+'" aria-selected="'+(k==tab)+'">'+TICON[k]+'<span>'+TL[k]+'</span></button>').join("");
+  $("sheet").innerHTML=moreTabs.map(k=>'<button role="tab" data-t="'+k+'" aria-selected="'+(k==tab)+'">'+ticon(k)+'<span>'+(k=="m"?ATAB[1]:TL[k])+'</span></button>').join("");
   if(gi>=S.groups.length)gi=0;
   const v=$("view");
   const gsel=()=>'<label for="gs">المجموعة</label><select id="gs">'+S.groups.map((x,i)=>'<option value="'+i+'"'+(i==gi?' selected':'')+'>'+esc(gname(x))+'</option>').join("")+'</select>';
@@ -220,6 +225,13 @@ function render(){
     v.innerHTML='<div class="card"><h2>النسخ الاحتياطي</h2><p>نزّل نسخة JSON من كل بياناتك في أي وقت. النسخة تحتوي بيانات طلابك، احفظها في مكان خاص وآمن.</p><button type="button" data-a="bk">تنزيل نسخة احتياطية</button></div>'
       +'<div class="card"><h2>استعادة نسخة</h2><label for="restorePick">استعادة نسخة JSON (بحد أقصى 5 ميجابايت)</label><input id="restorePick" class="srfile" type="file" accept="application/json,.json"><div class="btns"><button type="button" id="restoreBtn">اختيار ملف النسخة</button><span id="restoreName" class="fname" aria-live="polite"></span></div><small>الاستعادة بتنزّل نسخة من بياناتك الحالية الأول، وبعدين بتستبدلها بعد الحفظ.</small></div>'
       +'<div class="card"><h2>مزامنة الحفظ</h2><p>حالة الحفظ بتظهر دايمًا في شريط الحالة أعلى الصفحة.</p><div class="btns"><button type="button" class="ghost sm" data-a="retry">حاول الحفظ</button><button type="button" class="ghost sm" data-a="reload">إعادة تحميل البيانات</button></div></div>';
+  }else if(tab=="m"){
+    if(ADMIN_ROWS==null){v.innerHTML='<p>جاري تحميل الاشتراكات...</p>';adminLoad()}
+    else{const n=Date.now();
+      v.innerHTML='<div class="card"><h2>اشتراكات المدرّسين</h2><p>تفعيل وتجديد اشتراك أي مدرّس من هنا، بدون أي دفع إلكتروني — التحصيل بيظل يدوي كالمعتاد.</p></div>'+(ADMIN_ROWS.length?ADMIN_ROWS.map(r=>{const pu=r.paid_until?Date.parse(r.paid_until):0,te=r.trial_ends?Date.parse(r.trial_ends):0;
+        const st=pu>n?'<span class="tag ok">ساري لحد '+new Date(pu).toLocaleDateString("ar-EG")+'</span>':te>n?'<span class="tag warn">تجربة، باقي '+Math.max(0,Math.ceil((te-n)/864e5))+' يوم</span>':'<span class="tag bad">منتهي</span>';
+        return'<div class="card"><div class="stu"><span>'+esc(r.email)+'</span>'+st+'</div><p style="margin:6px 0">مدفوع لحد: '+(r.paid_until?new Date(pu).toLocaleDateString("ar-EG"):'—')+' · نهاية التجربة: '+(r.trial_ends?new Date(te).toLocaleDateString("ar-EG"):'—')+'</p><div class="btns"><button class="sm" data-a="adm-ext" data-id="'+r.user_id+'">تجديد شهر</button><input type="date" style="width:auto" id="admd_'+r.user_id+'" aria-label="تاريخ التفعيل"><button class="sm ghost" data-a="adm-set" data-id="'+r.user_id+'">تفعيل لحد التاريخ</button></div></div>'}).join(""):'<p>مفيش حسابات مدرّسين لسه.</p>');
+    }
   }else{
     const ms=months6();
     let h='<div class="card"><h2>الدخل آخر 6 شهور</h2>'+ms.map(m=>{const c=income(m);return'<div class="stu"><span>'+mname(m)+'</span><b>'+c+'</b></div>'}).join("")+'</div>';
@@ -236,6 +248,7 @@ function render(){
   q("pm",e=>{pmonth=e.target.value||pmonth;render()});q("rm",e=>{rmonth=e.target.value||rmonth;render()});
   const rb=$("restoreBtn");if(rb)rb.onclick=()=>{const i=$("restorePick");if(i)i.click()};
 }
+async function adminLoad(){const r=await sb.rpc("admin_list_subscriptions");if(r.error){status("تعذّر تحميل الاشتراكات: "+r.error.message);ADMIN_ROWS=[];render();return}ADMIN_ROWS=r.data||[];render()}
 $("tabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(b){tab=b.dataset.t;render()}};
 $("btabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(!b)return;if(b.dataset.t=="more"){moreOpen=!moreOpen;render();return}moreOpen=false;tab=b.dataset.t;render()};
 $("sheet").onclick=e=>{const b=e.target.closest("button[data-t]");if(!b)return;moreOpen=false;tab=b.dataset.t;render()};
@@ -243,9 +256,21 @@ $("view").onchange=e=>{const t=e.target;if(t.id==="restorePick"){restoreFile(t);
 $("view").onclick=async e=>{
   const tb=e.target.closest("button[data-t]");if(tb){tab=tb.dataset.t;render();return}
   const b=e.target.closest("button[data-a]");if(!b)return;
-  if(!active()&&!["os","cs","bk","retry","reload"].includes(b.dataset.a)){flash();return}
+  if(!active()&&!["os","cs","bk","retry","reload","adm-ext","adm-set"].includes(b.dataset.a)){flash();return}
   const a=b.dataset.a,i=+b.dataset.i,j=+b.dataset.j,m=today().slice(0,7);
   if(a==="os"||a==="cs"){sid=a==="os"?b.dataset.id:null;render();return}
+  if(a=="adm-ext"||a=="adm-set"){
+    const row=(ADMIN_ROWS||[]).find(x=>x.user_id==b.dataset.id);if(!row)return;
+    let until;
+    if(a=="adm-ext"){const base=new Date(Math.max(Date.now(),Date.parse(row.paid_until||0)||0));base.setMonth(base.getMonth()+1);until=base}
+    else{const inp=$("admd_"+row.user_id);if(!inp||!inp.value){status("اختار تاريخ التفعيل الأول.");return}until=new Date(inp.value+"T23:59:59")}
+    if(until.getTime()<=Date.now()){status("تاريخ التفعيل لازم يكون في المستقبل.");return}
+    if(!confirm("تفعيل اشتراك "+row.email+" لحد "+until.toLocaleDateString("ar-EG")+"؟ ده تعديل إداري في حالة الاشتراك فقط، من غير أي دفع إلكتروني."))return;
+    status("جاري حفظ التفعيل...");
+    const r=await sb.rpc("admin_set_paid_until",{target:row.user_id,until:until.toISOString()});
+    if(r.error){status("لم يتم التفعيل: "+r.error.message);return}
+    status("تم تفعيل الاشتراك لحد "+until.toLocaleDateString("ar-EG")+".");ADMIN_ROWS=null;render();return;
+  }
   if(a=="dg"){confirm("حذف المجموعة وطلابها من القوائم؟ نزّل نسخة احتياطية قبل الحذف. سيظل سجل التحصيل الجديد محفوظًا.")&&S.groups.splice(i,1)}
   else if(a=="ds"){confirm("حذف الطالب من القوائم؟ نزّل نسخة احتياطية قبل الحذف. سيظل سجل التحصيل الجديد محفوظًا.")&&S.groups[i].students.splice(j,1)}
   else if(a=="as"){S.groups[i].students.push(...$("ns"+i).value.split("\n").map(l=>l.split(/[,،]/).map(x=>x.trim())).filter(r=>r[0]).map(r=>({id:rid(),name:r[0],phone:r[1]||"",since:m})))}
