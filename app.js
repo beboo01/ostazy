@@ -1,6 +1,8 @@
 const DAYS=["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
 const STAGES=["ابتدائي","إعدادي","ثانوية عامة","جامعي"];
 const TABS=[["h","الرئيسية"],["g","المجموعات"],["s","الطلاب"],["a","الحضور"],["p","المصاريف"],["e","الدرجات"],["r","التقارير"]];
+const ICG=(p,s)=>`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
+const TICON={h:ICG('<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/>'),g:ICG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 5a3 3 0 0 1 0 6"/><path d="M17.5 14.4c2.4.7 4 2.7 4 5.6"/>'),s:ICG('<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11.2V15c0 1.7 2.7 3 6 3s6-1.3 6-3v-3.8"/>'),a:ICG('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>'),p:ICG('<rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/>'),e:ICG('<path d="M4 20V10M10 20V4M16 20v-7"/><path d="M2.5 20h19"/>'),r:ICG('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>')};
 const DEMO=["أحمد","مريم","يوسف","سلمى"];
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -160,7 +162,7 @@ function render(){
   S.groups.forEach(g=>{if(!g.days)g.days=[g.d||0];if(g.e===undefined)g.e=""});
   $("ttl").textContent=S.subject+" · "+S.stage;
   const all=allSt();$("sub").textContent=S.groups.length+" مجموعات، "+all.length+" طالب، "+S.price+" جنيه في الشهر";
-  $("tabs").innerHTML=TABS.map(([k,l])=>'<button role="tab" data-t="'+k+'" aria-selected="'+(k==tab)+'">'+l+'</button>').join("");
+  $("tabs").innerHTML=TABS.map(([k,l])=>'<button role="tab" data-t="'+k+'" aria-selected="'+(k==tab)+'">'+TICON[k]+'<span>'+l+'</span></button>').join("");
   if(gi>=S.groups.length)gi=0;
   const v=$("view");
   const gsel=()=>'<label for="gs">المجموعة</label><select id="gs">'+S.groups.map((x,i)=>'<option value="'+i+'"'+(i==gi?' selected':'')+'>'+esc(gname(x))+'</option>').join("")+'</select>';
@@ -170,7 +172,9 @@ function render(){
     const col=all.filter(s=>paid(m,s.id)).length,sc=all.map(s=>monthExam(s.id,m)).filter(x=>x!=null),avg=sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length)+"%":"—";
     const late=all.filter(s=>overdue(s).length),risky=all.map(s=>({s,x:monthAtt(s.id,m).x})).filter(r=>r.x>=2).sort((a,b)=>b.x-a.x).slice(0,6);
     const st=(n,l)=>'<div class="stat"><strong>'+n+'</strong><span>'+l+'</span></div>';
-    let h='<h2>'+mname(m)+'</h2><div class="stats">'+st(all.length,"طالب")+st(rt(all.map(s=>s.id)),"نسبة الحضور")+st(avg,"متوسط الدرجات")+st(totals(m).amount,"تحصيل بمبالغ مسجلة")+st((all.length-col)*S.price,"تقدير المطلوب بالسعر الحالي")+st(late.length,"متأخرين عن شهور")+'</div>';
+    const dstr=new Date().toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+    let h='<div class="hero"><h2>أهلًا بيك تاني</h2><p class="hd">'+dstr+' · نظرة سريعة على مجموعاتك ('+mname(m)+')</p><div class="stats">'+st(all.length,"طالب")+st(rt(all.map(s=>s.id)),"نسبة الحضور")+st(avg,"متوسط الدرجات")+st(totals(m).amount,"تحصيل بمبالغ مسجلة")+st((all.length-col)*S.price,"تقدير المطلوب بالسعر الحالي")+st(late.length,"متأخرين عن شهور")+'</div></div>';
+    h+='<div class="qgrid">'+[["a","qa-b","تسجيل الحضور","حاضر وغايب النهارده"],["g","qa-g","المجموعات والطلاب","إضافة وتعديل"],["p","qa-o","المصاريف","تأكيد التحصيل"],["e","qa-p","امتحان جديد","سجّل الدرجات"]].map(q=>'<button type="button" class="qa '+q[1]+'" data-t="'+q[0]+'">'+TICON[q[0]]+'<b>'+q[2]+'</b><span>'+q[3]+'</span></button>').join("")+'</div>';
     const ms6=months6(),rate=mm=>{let p=0,x=0;all.forEach(s=>{const a=monthAtt(s.id,mm);p+=a.p;x+=a.x});return p+x?Math.round(p/(p+x)*100):null};
     h+='<div class="card"><h2>نسبة الحضور آخر 6 شهور</h2>'+bars(ms6.map(rate),ms6.map(sm),"%")+'</div><div class="card"><h2>الدخل آخر 6 شهور (جنيه)</h2>'+bars(ms6.map(mm=>totals(mm).amount),ms6.map(sm))+'<p>الرسم للمبالغ المسجلة فقط. الدفعات القديمة بلا مبلغ لا تدخل فيه.</p>'+'</div>';
     h+='<div class="card"><h2>المجموعات</h2>'+S.groups.map(g=>'<div class="stu"><b>'+esc(gname(g))+'</b><span>'+g.students.length+' طالب · حضور '+rt(g.students.map(s=>s.id))+' · دفع '+g.students.filter(s=>paid(m,s.id)).length+'/'+g.students.length+'</span></div>').join("")+'</div>';
@@ -224,6 +228,7 @@ function render(){
 $("tabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(b){tab=b.dataset.t;render()}};
 $("view").onchange=e=>{const t=e.target;if(t.dataset&&(t.dataset.f||t.dataset.e)&&!active()){flash();render();return}if(t.dataset&&t.dataset.f){const s=findSt(t.dataset.sid);if(s){s[t.dataset.f]=t.value;persist()}return}if(t.dataset&&t.dataset.e){const ex=S.exams.find(x=>x.id==t.dataset.e);ex.scores[t.dataset.s]=C.clampScore(t.value,ex.max);persist();render()}};
 $("view").onclick=async e=>{
+  const tb=e.target.closest("button[data-t]");if(tb){tab=tb.dataset.t;render();return}
   const b=e.target.closest("button[data-a]");if(!b)return;
   if(!active()&&!["os","cs","bk"].includes(b.dataset.a)){flash();return}
   const a=b.dataset.a,i=+b.dataset.i,j=+b.dataset.j,m=today().slice(0,7);
