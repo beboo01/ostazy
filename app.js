@@ -1,8 +1,8 @@
 const DAYS=["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
 const STAGES=["ابتدائي","إعدادي","ثانوية عامة","جامعي"];
-const TABS=[["h","الرئيسية"],["g","المجموعات"],["s","الطلاب"],["a","الحضور"],["p","المصاريف"],["e","الدرجات"],["r","التقارير"]];
+const TABS=[["h","الرئيسية"],["g","المجموعات"],["s","الطلاب"],["a","الحضور"],["p","المصاريف"],["e","الدرجات"],["r","التقارير"],["b","النسخ الاحتياطي"]];
 const ICG=(p,s)=>`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
-const TICON={h:ICG('<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/>'),g:ICG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 5a3 3 0 0 1 0 6"/><path d="M17.5 14.4c2.4.7 4 2.7 4 5.6"/>'),s:ICG('<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11.2V15c0 1.7 2.7 3 6 3s6-1.3 6-3v-3.8"/>'),a:ICG('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>'),p:ICG('<rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/>'),e:ICG('<path d="M4 20V10M10 20V4M16 20v-7"/><path d="M2.5 20h19"/>'),r:ICG('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>')};
+const TICON={h:ICG('<path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V21h5v-6h4v6h5V9.5"/>'),g:ICG('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 5a3 3 0 0 1 0 6"/><path d="M17.5 14.4c2.4.7 4 2.7 4 5.6"/>'),s:ICG('<path d="M12 4L2 9l10 5 10-5-10-5z"/><path d="M6 11.2V15c0 1.7 2.7 3 6 3s6-1.3 6-3v-3.8"/>'),a:ICG('<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/>'),p:ICG('<rect x="3" y="6" width="18" height="14" rx="3"/><path d="M3 10h18M16 15h2"/>'),e:ICG('<path d="M4 20V10M10 20V4M16 20v-7"/><path d="M2.5 20h19"/>'),r:ICG('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>'),b:ICG('<path d="M12 3v11"/><path d="M7 10l5 5 5-5"/><path d="M4 19h16"/>')};
 const DEMO=["أحمد","مريم","يوسف","سلمى"];
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -32,7 +32,7 @@ async function init(){
   $("auth").classList.remove("hide");
 }
 async function load(){
-  $("auth").classList.add("hide");$("wiz").classList.add("hide");$("app").classList.add("hide");$("syncTools").classList.remove("hide");
+  $("auth").classList.add("hide");$("wiz").classList.add("hide");$("app").classList.add("hide");$("syncTools").classList.add("hide");
   status("جاري تحميل بياناتك...");loadFailed=false;saveBlocked=false;SUB=null;
   try{
     const {data,error}=await sb.from("teacher_state").select("state,updated_at").eq("user_id",uid).maybeSingle();
@@ -41,7 +41,7 @@ async function load(){
     S=data?.state||null;
     if(S)C.validateState(S);
     // Never copy unscoped legacy localStorage into a signed-in account automatically.
-  }catch(e){loadFailed=true;status("تعذّر تحميل البيانات بأمان. لن يتم إنشاء بيانات جديدة فوقها. أعد المحاولة، أو نزّل نسخة للدعم. "+(e.message||e));return}
+  }catch(e){loadFailed=true;$("syncTools").classList.remove("hide");status("تعذّر تحميل البيانات بأمان. لن يتم إنشاء بيانات جديدة فوقها. أعد المحاولة، أو نزّل نسخة للدعم. "+(e.message||e));return}
   dirty=false;editRevision=0;
   try{
     const {data,error}=await sb.from("subscriptions").select("trial_ends,paid_until").eq("user_id",uid).maybeSingle();
@@ -72,8 +72,8 @@ async function save2(){
         hasRemoteRow=true;remoteVersion=data[0].updated_at??stamp;
         dirty=editRevision!==revision;
       }
-      status("تم حفظ كل التغييرات على حسابك.");return true;
-    }catch(e){status((saveBlocked?"توقف الحفظ لحماية بياناتك من الكتابة فوق نسخة أحدث. نزّل نسختك أولًا ثم أعد التحميل. ":"لم يتم الحفظ. تغييراتك موجودة في الصفحة فقط. جرّب الحفظ أو نزّل نسخة قبل الإغلاق. ")+(e.message||e));return false}
+      $("syncTools").classList.add("hide");status("تم حفظ كل التغييرات على حسابك.");return true;
+    }catch(e){$("syncTools").classList.remove("hide");status((saveBlocked?"توقف الحفظ لحماية بياناتك من الكتابة فوق نسخة أحدث. نزّل نسختك أولًا ثم أعد التحميل. ":"لم يتم الحفظ. تغييراتك موجودة في الصفحة فقط. جرّب الحفظ أو نزّل نسخة قبل الإغلاق. ")+(e.message||e));return false}
     finally{saving=false}
   })();
   return savePromise;
@@ -82,14 +82,14 @@ function persist(){dirty=true;editRevision++;status("تغييرات لم تُح�
 $("retrySave").onclick=()=>save2();
 $("reloadData").onclick=()=>{if(dirty&&!confirm("يوجد تعديل غير محفوظ. نزّل نسخة احتياطية أولًا. هل تريد تجاهله وتحميل النسخة المحفوظة؟"))return;clearTimeout(pt);if(saving){status("انتظر اكتمال محاولة الحفظ أولًا.");return}load()};
 $("downloadAll").onclick=downloadBackup;
-$("restorePick").onchange=async e=>{
- const file=e.target.files[0];e.target.value="";if(!file)return;
+async function restoreFile(input){
+ const file=input.files[0];input.value="";if(!file)return;
  if(!active()){flash();return}
  try{if(file.size>5*1024*1024)throw new Error("حجم النسخة أكبر من 5 ميجابايت");const restored=C.parseBackup(await file.text());
  if(!confirm("الاستعادة ستستبدل بيانات الحساب الحالية بعد الحفظ. سيتم تنزيل نسخة من البيانات الحالية أولًا. هل أنت متأكد؟"))return;
  downloadBackup();S=restored;gi=0;sid=null;tab="h";persist();$("wiz").classList.add("hide");$("app").classList.remove("hide");render();
  }catch(error){status("لم تتم الاستعادة: "+error.message)}
-};
+}
 window.addEventListener("beforeunload",event=>{if(dirty||saving){event.preventDefault();event.returnValue=""}});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden"&&dirty&&!saving)save2()});
 async function authGo(up){
@@ -166,7 +166,7 @@ function render(){
   if(gi>=S.groups.length)gi=0;
   const v=$("view");
   const gsel=()=>'<label for="gs">المجموعة</label><select id="gs">'+S.groups.map((x,i)=>'<option value="'+i+'"'+(i==gi?' selected':'')+'>'+esc(gname(x))+'</option>').join("")+'</select>';
-  if(!S.groups.length&&tab!="g"){v.innerHTML='<p>أضف مجموعة الأول من تبويب المجموعات.</p>';return}
+  if(!S.groups.length&&tab!="g"&&tab!="b"){v.innerHTML='<p>أضف مجموعة الأول من تبويب المجموعات.</p>';return}
   if(tab=="h"){
     const m=today().slice(0,7),rt=(ids)=>{let p=0,x=0;ids.forEach(id=>{const a=monthAtt(id,m);p+=a.p;x+=a.x});return p+x?Math.round(p/(p+x)*100)+"%":"—"};
     const col=all.filter(s=>paid(m,s.id)).length,sc=all.map(s=>monthExam(s.id,m)).filter(x=>x!=null),avg=sc.length?Math.round(sc.reduce((a,b)=>a+b,0)/sc.length)+"%":"—";
@@ -189,7 +189,6 @@ function render(){
       '<label for="ns'+i+'">أضف طلاب (اسم، رقم ولي الأمر، كل طالب في سطر)</label><textarea id="ns'+i+'" placeholder="أحمد، 01012345678"></textarea><button class="sm" data-a="as" data-i="'+i+'" style="margin-top:6px">أضف</button>'+
       '<div style="margin-top:10px"><b>الأيام والميعاد</b>'+dayChips("r"+i,g.days)+'<div class="row" style="margin-top:6px"><div>من<input id="rt'+i+'" type="time" value="'+g.t+'"></div><div>إلى<input id="re'+i+'" type="time" value="'+(g.e||"")+'"></div><button class="ghost sm fx" data-a="rs" data-i="'+i+'">غيّر الميعاد</button></div></div></div>').join("");
     h+='<div class="card"><h2>مجموعة جديدة</h2><b>اختار الأيام</b>'+dayChips("n",[])+'<div class="row" style="margin-top:6px"><input id="nt" type="time" value="17:00" aria-label="من"><input id="ne" type="time" value="19:00" aria-label="إلى"><button class="fx" data-a="ag">أضف</button></div></div>';
-    h+='<button class="ghost" data-a="bk">حمّل نسخة احتياطية</button>';
     v.innerHTML=h;
   }else if(tab=="s"){
     const student=sid&&findSt(sid),f=student?{...student,g:S.groups.find(group=>group.students.includes(student))}:null;
@@ -210,6 +209,10 @@ function render(){
     let h='<div class="card"><h2>امتحان جديد</h2>'+gsel()+'<div class="row"><div><label for="et">الاسم</label><input id="et" placeholder="امتحان الباب الأول"></div><div><label for="em">من كام</label><input id="em" type="number" value="20"></div></div><button class="sm" data-a="ae" style="margin-top:8px">أضف الامتحان</button></div>';
     h+=S.exams.slice().reverse().map(e=>{const g=S.groups.find(x=>x.id==e.gid);if(!g)return"";return'<div class="card"><div class="row" style="justify-content:space-between"><h2>'+esc(e.title)+' <span style="color:var(--mute);font-size:13px">'+esc(gname(g))+" · "+e.date+'</span></h2><button class="ghost sm fx" data-a="de" data-id="'+e.id+'">حذف</button></div>'+g.students.map(s=>{const sc=e.scores[s.id];return'<div class="stu"><span>'+esc(s.name)+'</span><div class="btns"><input class="sc" type="number" min="0" max="'+e.max+'" data-e="'+e.id+'" data-s="'+s.id+'" value="'+(sc==null?"":sc)+'" aria-label="درجة '+esc(s.name)+'"> / '+e.max+(sc!=null&&sc!==""?A(s.phone,"السلام عليكم، درجة "+s.name+" في "+e.title+": "+sc+" من "+e.max+".","ابعت"):"")+'</div></div>'}).join("")+'</div>'}).join("");
     v.innerHTML=h;
+  }else if(tab=="b"){
+    v.innerHTML='<div class="card"><h2>النسخ الاحتياطي</h2><p>نزّل نسخة JSON من كل بياناتك في أي وقت. النسخة تحتوي بيانات طلابك، احفظها في مكان خاص وآمن.</p><button type="button" data-a="bk">تنزيل نسخة احتياطية</button></div>'
+      +'<div class="card"><h2>استعادة نسخة</h2><label for="restorePick">استعادة نسخة JSON (بحد أقصى 5 ميجابايت)</label><input id="restorePick" type="file" accept="application/json,.json"><small>الاستعادة بتنزّل نسخة من بياناتك الحالية الأول، وبعدين بتستبدلها بعد الحفظ.</small></div>'
+      +'<div class="card"><h2>مزامنة الحفظ</h2><p>حالة الحفظ بتظهر دايمًا في شريط الحالة أعلى الصفحة.</p><div class="btns"><button type="button" class="ghost sm" data-a="retry">حاول الحفظ</button><button type="button" class="ghost sm" data-a="reload">إعادة تحميل البيانات</button></div></div>';
   }else{
     const ms=months6();
     let h='<div class="card"><h2>الدخل آخر 6 شهور</h2>'+ms.map(m=>{const c=income(m);return'<div class="stu"><span>'+mname(m)+'</span><b>'+c+'</b></div>'}).join("")+'</div>';
@@ -226,11 +229,11 @@ function render(){
   q("pm",e=>{pmonth=e.target.value||pmonth;render()});q("rm",e=>{rmonth=e.target.value||rmonth;render()});
 }
 $("tabs").onclick=e=>{const b=e.target.closest("button[data-t]");if(b){tab=b.dataset.t;render()}};
-$("view").onchange=e=>{const t=e.target;if(t.dataset&&(t.dataset.f||t.dataset.e)&&!active()){flash();render();return}if(t.dataset&&t.dataset.f){const s=findSt(t.dataset.sid);if(s){s[t.dataset.f]=t.value;persist()}return}if(t.dataset&&t.dataset.e){const ex=S.exams.find(x=>x.id==t.dataset.e);ex.scores[t.dataset.s]=C.clampScore(t.value,ex.max);persist();render()}};
+$("view").onchange=e=>{const t=e.target;if(t.id==="restorePick"){restoreFile(t);return}if(t.dataset&&(t.dataset.f||t.dataset.e)&&!active()){flash();render();return}if(t.dataset&&t.dataset.f){const s=findSt(t.dataset.sid);if(s){s[t.dataset.f]=t.value;persist()}return}if(t.dataset&&t.dataset.e){const ex=S.exams.find(x=>x.id==t.dataset.e);ex.scores[t.dataset.s]=C.clampScore(t.value,ex.max);persist();render()}};
 $("view").onclick=async e=>{
   const tb=e.target.closest("button[data-t]");if(tb){tab=tb.dataset.t;render();return}
   const b=e.target.closest("button[data-a]");if(!b)return;
-  if(!active()&&!["os","cs","bk"].includes(b.dataset.a)){flash();return}
+  if(!active()&&!["os","cs","bk","retry","reload"].includes(b.dataset.a)){flash();return}
   const a=b.dataset.a,i=+b.dataset.i,j=+b.dataset.j,m=today().slice(0,7);
   if(a==="os"||a==="cs"){sid=a==="os"?b.dataset.id:null;render();return}
   if(a=="dg"){confirm("حذف المجموعة وطلابها من القوائم؟ نزّل نسخة احتياطية قبل الحذف. سيظل سجل التحصيل الجديد محفوظًا.")&&S.groups.splice(i,1)}
@@ -244,6 +247,8 @@ $("view").onclick=async e=>{
   else if(a=="ae"){const t=$("et").value.trim();if(!t)return;S.exams.push({id:rid(),gid:S.groups[gi].id,title:t,date:today(),max:Math.max(1,num($("em").value)||20),scores:{}})}
   else if(a=="de"){confirm("حذف الامتحان ودرجاته؟")&&(S.exams=S.exams.filter(x=>x.id!=b.dataset.id))}
   else if(a=="bk"){downloadBackup();return}
+  else if(a=="retry"){save2();return}
+  else if(a=="reload"){if(dirty&&!confirm("يوجد تعديل غير محفوظ. نزّل نسخة احتياطية أولًا. هل تريد تجاهله وتحميل النسخة المحفوظة؟"))return;clearTimeout(pt);if(saving){status("انتظر اكتمال محاولة الحفظ أولًا.");return}load();return}
   persist();render();
 };
 sb.auth.onAuthStateChange(event=>{if(event==="SIGNED_OUT"&&uid){uid=null;clearTimeout(pt);$("app").classList.add("hide");$("wiz").classList.add("hide");$("auth").classList.remove("hide");status("انتهت جلسة الدخول. نزّل أي تغييرات غير محفوظة قبل إعادة الدخول.")}});
