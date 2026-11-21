@@ -74,7 +74,7 @@ a.wa:hover{background:#15803D}
 #auth .card,#wiz .card{max-width:460px;margin-inline:auto}
 @media(min-width:900px){
 main{max-width:1200px;padding:20px 24px 56px}
-#app{display:grid;grid-template-columns:248px minmax(0,1fr);gap:20px;align-items:start}
+#app:not(.hide){display:grid;grid-template-columns:248px minmax(0,1fr);gap:20px;align-items:start}
 .side{position:sticky;top:20px;margin-bottom:0;background:linear-gradient(180deg,var(--navy),var(--navy2));border-radius:18px;box-shadow:var(--sh);padding:14px 10px}
 .tabs{flex-direction:column;background:transparent;border:0;box-shadow:none;overflow:visible;padding:0}
 .tabs button{width:100%;justify-content:flex-start;color:var(--navtx);padding:10px 14px;font-size:15px}
